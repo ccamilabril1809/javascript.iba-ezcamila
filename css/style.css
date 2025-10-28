@@ -1,0 +1,17 @@
+body {
+    background: #e090c120;
+}
+
+.badge-round {
+    border-radius: 999px;
+}
+
+.mono {
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
