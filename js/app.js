@@ -1,16 +1,16 @@
-// ---------------------
+
 // CONFIGURACIÓN
-// ---------------------
-const TH_OK_MAX = 1.0;     // hasta 1% está OK
-const TH_WARN_MAX = 2.5;   // hasta 2.5% es "REVISAR"
+
+const TH_OK_MAX = 1.0;
+const TH_WARN_MAX = 2.5;
 const LS_KEY = "simRegistrosInexactitud";
 
-let registros = []; // cada elemento: { etiqueta, pedidos, reclamos, pct, estado }
+let registros = [];
 
 
-// ---------------------
+
 // FUNCIONES DE CÁLCULO
-// ---------------------
+
 function calcularPct(pedidos, reclamos) {
     if (!Number.isFinite(pedidos) || !Number.isFinite(reclamos) || pedidos <= 0 || reclamos < 0) {
         return null;
@@ -39,9 +39,8 @@ function getBadgeClass(estado) {
 }
 
 
-// ---------------------
 // LOCAL STORAGE
-// ---------------------
+
 function guardarEnLocalStorage() {
     localStorage.setItem(LS_KEY, JSON.stringify(registros));
 }
@@ -56,9 +55,9 @@ function cargarDeLocalStorage() {
 }
 
 
-// ---------------------
+
 // RENDER
-// ---------------------
+
 function renderTabla() {
     const tbody = document.getElementById("tablaBody");
     const msgSinDatos = document.getElementById("msgSinDatos");
@@ -90,7 +89,7 @@ function renderTabla() {
         tbody.appendChild(tr);
     });
 
-    // asigno evento a cada botón "Eliminar"
+
     tbody.querySelectorAll("button[data-index]").forEach(btn => {
         btn.addEventListener("click", (e) => {
             const i = Number(e.target.getAttribute("data-index"));
@@ -138,9 +137,9 @@ function renderTodo() {
 }
 
 
-// ---------------------
+
 // ACCIONES
-// ---------------------
+
 function agregarRegistro(etiqueta, pedidos, reclamos) {
     const pct = calcularPct(pedidos, reclamos);
     const estado = estadoSegunPct(pct);
@@ -191,11 +190,9 @@ function mostrarError(msg) {
 }
 
 
-// ---------------------
-// EVENTOS DEL DOM
-// ---------------------
+// EVENTOS DEL DOM //
+
 document.addEventListener("DOMContentLoaded", () => {
-    // cargar estado inicial desde localStorage
     cargarDeLocalStorage();
     renderTodo();
 
@@ -205,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const inpReclamos = document.getElementById("inpReclamos");
     const btnLimpiar = document.getElementById("btnLimpiar");
 
-    // cuando envío el formulario
+
     form.addEventListener("submit", (e) => {
         e.preventDefault();
 
@@ -221,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // botón "Limpiar todo"
+    // botón CLEAR
     btnLimpiar.addEventListener("click", () => {
         limpiarTodo();
     });
