@@ -1,13 +1,12 @@
-// ============================
-// CONFIG REMOTA (JSON)
-// ============================
+
+// CONFIG  (JSON)
+
 let TH_OK_MAX = 1.0;
 let TH_WARN_MAX = 2.5;
 let LS_KEY = "simRegistrosInexactitud";
 
 let registros = [];
 
-// Cargar config.json de forma asíncrona
 async function cargarConfig() {
     try {
         const res = await fetch("./config.json");
@@ -21,9 +20,9 @@ async function cargarConfig() {
     }
 }
 
-// ============================
+
 // CLASE REGISTRO (Escalabilidad)
-// ============================
+
 class Registro {
     constructor(etiqueta, pedidos, reclamos) {
         this.etiqueta = etiqueta.trim();
@@ -38,9 +37,8 @@ class Registro {
     }
 }
 
-// ============================
 // FUNCIONES DE CÁLCULO
-// ============================
+
 function calcularPct(pedidos, reclamos) {
     if (!Number.isFinite(pedidos) || !Number.isFinite(reclamos) || pedidos <= 0 || reclamos < 0) {
         return null;
@@ -68,9 +66,9 @@ function getBadgeClass(estado) {
     }
 }
 
-// ============================
+
 // LOCAL STORAGE
-// ============================
+
 function guardarEnLocalStorage() {
     localStorage.setItem(LS_KEY, JSON.stringify(registros));
 }
@@ -87,9 +85,9 @@ function cargarDeLocalStorage() {
     }
 }
 
-// ============================
+
 // RENDER
-// ============================
+
 function renderTabla() {
     const tbody = document.getElementById("tablaBody");
     const msgSinDatos = document.getElementById("msgSinDatos");
@@ -164,9 +162,9 @@ function renderTodo() {
     renderResumen();
 }
 
-// ============================
-// ACCIONES
-// ============================
+
+// ACCIONES //
+
 function agregarRegistro(etiqueta, pedidos, reclamos) {
     const reg = new Registro(etiqueta, pedidos, reclamos);
 
@@ -238,9 +236,8 @@ function mostrarError(msg) {
     }, 4000);
 }
 
-// ============================
 // EVENTOS DEL DOM
-// ============================
+
 document.addEventListener("DOMContentLoaded", async () => {
     await cargarConfig();
     cargarDeLocalStorage();
