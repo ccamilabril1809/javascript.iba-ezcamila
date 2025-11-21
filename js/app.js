@@ -1,16 +1,46 @@
-
-// CONFIGURACIÓN
-
-const TH_OK_MAX = 1.0;
-const TH_WARN_MAX = 2.5;
-const LS_KEY = "simRegistrosInexactitud";
+// ============================
+// CONFIG REMOTA (JSON)
+// ============================
+let TH_OK_MAX = 1.0;
+let TH_WARN_MAX = 2.5;
+let LS_KEY = "simRegistrosInexactitud";
 
 let registros = [];
 
+// Cargar config.json de forma asíncrona
+async function cargarConfig() {
+    try {
+        const res = await fetch("./config.json");
+        const cfg = await res.json();
 
+        TH_OK_MAX = cfg.TH_OK_MAX ?? TH_OK_MAX;
+        TH_WARN_MAX = cfg.TH_WARN_MAX ?? TH_WARN_MAX;
+        LS_KEY = cfg.LS_KEY ?? LS_KEY;
+    } catch (err) {
+        console.warn("No se pudo cargar config.json, usando valores por defecto.", err);
+    }
+}
 
+// ============================
+// CLASE REGISTRO (Escalabilidad)
+// ============================
+class Registro {
+    constructor(etiqueta, pedidos, reclamos) {
+        this.etiqueta = etiqueta.trim();
+        this.pedidos = pedidos;
+        this.reclamos = reclamos;
+        this.pct = this.calcularPct();
+        this.estado = estadoSegunPct(this.pct);
+    }
+
+    calcularPct() {
+        return calcularPct(this.pedidos, this.reclamos);
+    }
+}
+
+// ============================
 // FUNCIONES DE CÁLCULO
-
+// ============================
 function calcularPct(pedidos, reclamos) {
     if (!Number.isFinite(pedidos) || !Number.isFinite(reclamos) || pedidos <= 0 || reclamos < 0) {
         return null;
@@ -38,9 +68,9 @@ function getBadgeClass(estado) {
     }
 }
 
-
+// ============================
 // LOCAL STORAGE
-
+// ============================
 function guardarEnLocalStorage() {
     localStorage.setItem(LS_KEY, JSON.stringify(registros));
 }
@@ -48,16 +78,18 @@ function guardarEnLocalStorage() {
 function cargarDeLocalStorage() {
     try {
         const data = localStorage.getItem(LS_KEY);
-        registros = data ? JSON.parse(data) : [];
+        const arr = data ? JSON.parse(data) : [];
+
+        // Reconstruyo instancias Registro
+        registros = arr.map(r => new Registro(r.etiqueta, r.pedidos, r.reclamos));
     } catch {
         registros = [];
     }
 }
 
-
-
+// ============================
 // RENDER
-
+// ============================
 function renderTabla() {
     const tbody = document.getElementById("tablaBody");
     const msgSinDatos = document.getElementById("msgSinDatos");
@@ -72,23 +104,20 @@ function renderTabla() {
 
     registros.forEach((r, index) => {
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
-            <td>${r.etiqueta}</td>
-            <td class="text-end mono">${r.pedidos}</td>
-            <td class="text-end mono">${r.reclamos}</td>
-            <td class="text-end mono">${r.pct}%</td>
-            <td><span class="${getBadgeClass(r.estado)}">${r.estado}</span></td>
-            <td class="text-end">
-                <button class="btn btn-sm btn-outline-danger" data-index="${index}">
-                    Eliminar
-                </button>
-            </td>
-        `;
-
+      <td>${r.etiqueta}</td>
+      <td class="text-end mono">${r.pedidos}</td>
+      <td class="text-end mono">${r.reclamos}</td>
+      <td class="text-end mono">${r.pct}%</td>
+      <td><span class="${getBadgeClass(r.estado)}">${r.estado}</span></td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-danger" data-index="${index}">
+          Eliminar
+        </button>
+      </td>
+    `;
         tbody.appendChild(tr);
     });
-
 
     tbody.querySelectorAll("button[data-index]").forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -113,7 +142,6 @@ function renderResumen() {
         return;
     }
 
-    // sumo totales
     let totP = 0;
     let totR = 0;
     registros.forEach(r => {
@@ -136,48 +164,69 @@ function renderTodo() {
     renderResumen();
 }
 
-
-
+// ============================
 // ACCIONES
-
+// ============================
 function agregarRegistro(etiqueta, pedidos, reclamos) {
-    const pct = calcularPct(pedidos, reclamos);
-    const estado = estadoSegunPct(pct);
+    const reg = new Registro(etiqueta, pedidos, reclamos);
 
-    if (pct === null || estado === "INVÁLIDO") {
+    if (reg.pct === null || reg.estado === "INVÁLIDO") {
         mostrarError("Datos inválidos. Verificá que pedidos > 0 y reclamos ≥ 0.");
         return false;
     }
 
-    registros.push({
-        etiqueta: etiqueta.trim(),
-        pedidos,
-        reclamos,
-        pct,
-        estado
-    });
-
+    registros.push(reg);
     guardarEnLocalStorage();
     renderTodo();
     return true;
 }
 
-function eliminarRegistro(index) {
-    const seguro = confirm("¿Seguro que querés eliminar este registro?");
-    if (!seguro) return;
+async function eliminarRegistro(index) {
+    const r = await Swal.fire({
+        title: "¿Eliminar registro?",
+        text: "Esta acción no se puede deshacer.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar"
+    });
+
+    if (!r.isConfirmed) return;
 
     registros.splice(index, 1);
     guardarEnLocalStorage();
     renderTodo();
+
+    Swal.fire({
+        title: "Eliminado",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false
+    });
 }
 
-function limpiarTodo() {
-    const seguro = confirm("¿Seguro que querés borrar TODOS los registros?");
-    if (!seguro) return;
+async function limpiarTodo() {
+    const r = await Swal.fire({
+        title: "¿Borrar todo?",
+        text: "Vas a eliminar TODOS los registros guardados.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, borrar todo",
+        cancelButtonText: "Cancelar"
+    });
+
+    if (!r.isConfirmed) return;
 
     registros = [];
     guardarEnLocalStorage();
     renderTodo();
+
+    Swal.fire({
+        title: "Registros borrados",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false
+    });
 }
 
 function mostrarError(msg) {
@@ -189,10 +238,11 @@ function mostrarError(msg) {
     }, 4000);
 }
 
-
-// EVENTOS DEL DOM //
-
-document.addEventListener("DOMContentLoaded", () => {
+// ============================
+// EVENTOS DEL DOM
+// ============================
+document.addEventListener("DOMContentLoaded", async () => {
+    await cargarConfig();
     cargarDeLocalStorage();
     renderTodo();
 
@@ -201,7 +251,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const inpPedidos = document.getElementById("inpPedidos");
     const inpReclamos = document.getElementById("inpReclamos");
     const btnLimpiar = document.getElementById("btnLimpiar");
-
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -218,8 +267,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // botón CLEAR
     btnLimpiar.addEventListener("click", () => {
         limpiarTodo();
     });
+
+
+    // BOTÓN PRUEBA
+    const btnDemo = document.getElementById("btnDemo");
+
+    btnDemo.addEventListener("click", () => {
+        const demo = [
+            new Registro("Turno mañana", 420, 2),
+            new Registro("Turno tarde", 380, 9),
+            new Registro("Delivery noche", 260, 7),
+        ];
+
+        registros = [...registros, ...demo];
+        guardarEnLocalStorage();
+        renderTodo();
+    });
+
 });
